@@ -5,18 +5,24 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.EventChannel
+import com.jieli.jl_bt_ota.callback.IUpgradeCallback
+import com.jieli.jl_bt_ota.OTAClient
+import com.jieli.jl_bt_ota.model.OTAConfigure
 
 /**
  * JlDfuPlugin
  *
- * A Flutter plugin for Jieli OTA updates. This plugin exposes methods to start
- * and cancel firmware updates using the JL OTA SDK. Bluetooth scanning
- * and connection management must be handled by your application.
+ * Implements OTA update features using the Jieli jl_bt_ota library. This plugin exposes
+ * methods to start and cancel an OTA update. It assumes the application already
+ * manages the Bluetooth connection and passes in a file path. Progress and status
+ * events are sent back to Flutter via an EventChannel. Status strings map to
+ * JL_OTAResult values defined in the iOS/Android SDKs.
  */
 class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
     private lateinit var methodChannel: MethodChannel
     private lateinit var progressChannel: EventChannel
     private var progressSink: EventChannel.EventSink? = null
+    private var otaClient: OTAClient? = null
 
     override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel = MethodChannel(binding.binaryMessenger, "jl_dfu")
@@ -33,19 +39,44 @@ class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "startOtaUpdate" -> {
-                val filePath: String? = call.argument<String>("filePath")
+                val filePath: String? = call.argument("filePath")
                 if (filePath.isNullOrEmpty()) {
                     result.error("INVALID_ARGUMENT", "filePath is required", null)
                     return
                 }
-                // TODO: Integrate JL OTA SDK to start update using filePath.
-                // Send a start status event to Flutter.
-                progressSink?.success(mapOf("progress" to 0.0, "status" to "start"))
+                // Build OTA configuration with file path
+                val configure = OTAConfigure.Builder()
+                    .setFilePath(filePath)
+                    .build()
+                otaClient = OTAClient.getDefault()
+                otaClient?.startOTA(configure, object : IUpgradeCallback {
+                    override fun onStartOTA() {
+                        progressSink?.success(mapOf("progress" to 0.0, "status" to "preparing"))
+                    }
+
+                    override fun onProgress(progress: Float) {
+                        // progress provided as 0-100; normalize to 0-1
+                        val normalized = progress.toDouble() / 100.0
+                        progressSink?.success(mapOf("progress" to normalized, "status" to "upgrading"))
+                    }
+
+                    override fun onStopOTA() {
+                        progressSink?.success(mapOf("progress" to 1.0, "status" to "success"))
+                    }
+
+                    override fun onCancelOTA() {
+                        progressSink?.success(mapOf("progress" to 0.0, "status" to "cancel"))
+                    }
+
+                    override fun onError(code: Int) {
+                        progressSink?.success(mapOf("progress" to 0.0, "status" to "fail", "errorCode" to code))
+                    }
+                })
                 result.success(null)
             }
             "cancelOtaUpdate" -> {
-                // TODO: Cancel OTA update via JL OTA SDK.
-                progressSink?.success(mapOf("progress" to 0.0, "status" to "cancelled"))
+                otaClient?.cancelOTA()
+                progressSink?.success(mapOf("progress" to 0.0, "status" to "cancel"))
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -54,9 +85,6 @@ class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         progressSink = events
-        // When integrated with the JL OTA SDK, forward progress callbacks here.
-        // Example usage (to be replaced with real callback):
-        // progressSink?.success(mapOf("progress" to progress, "status" to "downloading"))
     }
 
     override fun onCancel(arguments: Any?) {

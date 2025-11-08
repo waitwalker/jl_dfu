@@ -1,0 +1,23 @@
+name: jl_dfu
+description: A Flutter plugin for OTA firmware updates (DFU) for Jieli Bluetooth chips using the latest Jieli OTA SDKs on Android and iOS. Only OTA functionality; scanning and connection must be handled by your app.
+version: 0.0.1
+homepage: https://github.com/waitwalker/jl_dfu
+environment:
+  sdk: ">=2.17.0 <4.0.0"
+  flutter: ">=3.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.jl_dfu.jl_dfu
+        pluginClass: JlDfuPlugin
+      ios:
+        pluginClass: JlDfuPlugin

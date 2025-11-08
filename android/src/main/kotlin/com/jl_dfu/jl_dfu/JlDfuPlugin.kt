@@ -10,7 +10,7 @@ import io.flutter.plugin.common.EventChannel
  * JlDfuPlugin
  *
  * A Flutter plugin for Jieli OTA updates. This plugin exposes methods to start
- * and cancel firmware updates using the Jieli OTA SDK. Bluetooth scanning
+ * and cancel firmware updates using the JL OTA SDK. Bluetooth scanning
  * and connection management must be handled by your application.
  */
 class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel.StreamHandler {
@@ -38,12 +38,14 @@ class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel
                     result.error("INVALID_ARGUMENT", "filePath is required", null)
                     return
                 }
-                // TODO: Integrate JL OTA SDK to start update using the filePath.
-                // Connection to the Bluetooth device must be handled by the host app.
+                // TODO: Integrate JL OTA SDK to start update using filePath.
+                // Send a start status event to Flutter.
+                progressSink?.success(mapOf("progress" to 0.0, "status" to "start"))
                 result.success(null)
             }
             "cancelOtaUpdate" -> {
-                // TODO: Cancel OTA update if supported by the JL OTA SDK.
+                // TODO: Cancel OTA update via JL OTA SDK.
+                progressSink?.success(mapOf("progress" to 0.0, "status" to "cancelled"))
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -52,7 +54,9 @@ class JlDfuPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, EventChannel
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
         progressSink = events
-        // TODO: send progress updates from native OTA library to progressSink?.success(progress)
+        // When integrated with the JL OTA SDK, forward progress callbacks here.
+        // Example usage (to be replaced with real callback):
+        // progressSink?.success(mapOf("progress" to progress, "status" to "downloading"))
     }
 
     override fun onCancel(arguments: Any?) {

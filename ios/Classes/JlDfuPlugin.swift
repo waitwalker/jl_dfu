@@ -18,14 +18,17 @@ public class JlDfuPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
         case "startOtaUpdate":
             if let args = call.arguments as? [String: Any],
                let filePath = args["filePath"] as? String {
-                // TODO: Implement OTA update using JL_OTALib with provided file path.
-                result(FlutterMethodNotImplemented)
+                // TODO: Integrate JL_OTALib to start OTA update with filePath.
+                // Send start status event.
+                eventSink?(["progress": 0.0, "status": "start"])
+                result(nil)
             } else {
                 result(FlutterError(code: "INVALID_ARGUMENT", message: "filePath is required", details: nil))
             }
         case "cancelOtaUpdate":
-            // TODO: Implement canceling OTA update.
-            result(FlutterMethodNotImplemented)
+            // TODO: Cancel OTA update using JL_OTALib.
+            eventSink?(["progress": 0.0, "status": "cancelled"])
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -33,6 +36,8 @@ public class JlDfuPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
     public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         self.eventSink = events
+        // When integrated with JL_OTALib, forward progress callbacks using:
+        // eventSink(["progress": progressValue, "status": "downloading"])
         return nil
     }
 
